@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datasheet</title>
+    <style>
+        .hdr {
+            margin-bottom: .5rem;
+            font-weight: 500;
+            line-height: 1.2;
+            font-size: 1.25rem;
+        }
+    </style>
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
+    <script type="text/javascript" src="/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+        function Reset(){
+              $('div.card').hide();
+              $('#ddlSem').hide();  
+              $('#tblCrs').hide();
+              $('#tblReg').hide();
+              $('#register').hide();
+            }
+        $(document).ready(function(){
+            Reset();
+
+            $('.pbk').keypress(function(e){
+                if(e.which === 13){
+                    getStudent();
+                    getSemesters();
+                    showRegistrations();
+                }
+            });
+
+            $('#semester').change(function(){
+                getCourses();
+            });
+            
+            $('#mchk').change(function(){
+                $('.chk').prop('checked',$('#mchk').is(':checked'));
+                
+            });
+
+            $('#register').click(function(){
+                var courseids=[];
+                $('#tblCrs > table > tbody > tr').map(function(){
+                    if($(this).find('td:eq(0) > input:checkbox').is(':checked')){
+                        courseids.push(($(this).find('td:eq(0) > input:checkbox').val()))
+                    }
+                })
+                console.log(courseids);
+                addRegistration(courseids);
+            }).get();
+        })
+
+        const getStudent=function(){
+            let regno =$('#regno').val();
+             $.ajax({
+                 url: `/api/students/${regno}`
+             }).then(function(student){
+                 console.log(student)
+
+                $('#studentname').text(student.studentname)
+                $('#fathername').text(student.fathername)
+
+                $('div.card').show();
+             })
+                }
+
+        const getSemesters= function(){
+            $.ajax({
+                 url: '/api/courses/all'
+             }).then(function(semesters){
+                 console.log(semesters);
+                $.each(semesters, function(si, sem){
+                $('#semester').append(`<option value="${sem}" >${sem}</option>`);
+                })
+                $('#ddlSem').show();
+             })
+            }
+             
+            const getCourses=function(){
+                let semno=$('#semester').val();
+                    console.log($('#semester').val());
+                $.ajax({
+                   url:`api/courses/${semno}`
+                
+             }).then(function(courses){
+                $('#tblCrs > table > tbody').empty();
+                console.log(courses);
+                $.each(courses,function(ci,crs){
+                    let tr=`
+                    <tr>
+                              <td> <input type="checkbox" class="chk" value="${crs.courseid}"></td>
+                              <td>${crs.code}</td>
+                              <td>${crs.title}</td>
+                              <td>${crs.crhr}</td>
+                          </tr>
+                    `
+                    $('#tblCrs > table > tbody').append(tr);
+                    $('#tblCrs > table > tbody > tr').map(function(){if($(this).find('td:eq(0) > input:checkbox').is(':checked')){console.log($(this).find('td:eq(0) > input:checkbox').val())}})               
+                 })
+             })
+             $('#tblCrs').show();
+             $('#register').show();
+         }
+
+         const addRegistration=(courseids)=>{
+             let regno =$('#regno').val();
+
+             $.ajax({
+                 url: '/api/registration/add',
+                 method:'POST',
+                 data:{'courseids':JSON.stringify(courseids),'regno':regno}
+             }).then(function(res){
+                 console.log(res);
+             })
+
+         }
+
+         const showRegistrations =()=>{
+             let regno=$('#regno').val()
+             $.ajax({
+                 url:`/api/registration/${regno}`
+             }).then(function(regs){
+                 console.log(regs);
+                $.each(regs,(ri,reg)=>{
+                    let tr=`<tr>
+                    <td>${reg.course.code}</td>
+                      <td>${reg.course.title}</td>
+                      <td>${reg.course.crhr}</td>
+                      <td>${reg.grade!=null? reg.grade.grade:''}</td>
+                      <td>${reg.grade!=null? reg.grade.gpa:''}</td>     
+                  </tr>`
+
+                  $('#tblReg > table >tbody').append(tr);
+                })
+             })
+             $('#tblReg').show();
+         }
+
+
+        
+    </script>
+</head>
+<body>
+<div>
+    <!-- As a heading -->
+    <nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+        <span class="navbar-brand mb-0 h1">Navbar</span>
+    </nav>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="basic-addon3">Reg. No</span>
+                </div>
+                <input type="text" class="form-control pbk" id="regno" name="regno" aria-describedby="basic-addon3">
+              </div>
+              <div class="card">
+                <h5 class="card-header">Student Details</h5>
+                <div class="card-body">
+                  <span class="hdr text-info">Student's Name :</span>
+                  <span class="card-text" id="studentname"></span>
+                    <hr>
+                  <span class="hdr text-info">Father's Name</span>
+                  <span class="card-text" id="fathername"></span>
+                  
+                </div>
+              </div>
+              <div class="input-group mb-3" id="ddlSem">
+                <div class="input-group-prepend">
+                  <label class="input-group-text" for="inputGroupSelect01">Semesters:</label>
+                </div>
+                <select class="custom-select" id="semester">
+                  <option selected>Choose...</option>
+                </select>
+              </div>    
+              <br>
+              <div id="tblCrs">
+                  <h4 class="text-info">Courses:</h4>
+                  <table class="table table-sm">
+                      <thead>
+                          <tr>
+                            <th>
+                                <input type="checkbox" name="mchk" id="mchk">
+                            </th>
+                              <th>Code</th>
+                              <th>Title</th>
+                              <th>Cr. hrs</th>
+                              
+                          </tr>
+                      </thead>
+                      <tbody>
+                         
+                      </tbody>
+                      
+                  </table>
+              </div>
+              <button type="button" id="register" class="btn btn-outline-primary">Register</button>  
+        </div>
+        <div class="col-md-6">
+        <div id="tblReg">
+            <h4 class="text-info">Registrations</h4>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                      <th>Code</th>
+                        <th>Title</th>
+                        <th>cr.hr</th>
+                        <th>Grade</th>
+                        <th>GPA</th>
+                        
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
